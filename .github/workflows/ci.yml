@@ -5,6 +5,9 @@ on:
     branches: [staging]
   workflow_dispatch: {}
 
+env:
+  CI_PORT: 8080
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -20,11 +23,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust-version }}
-          profile: minimal
-          override: true
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -53,15 +54,14 @@ jobs:
 
       - name: Start server (background)
         run: |
-          PORT=${{ env.CI_PORT:-8080 }}
-          cargo run --release &> server.log & echo $! > .server_pid
+          PORT=${{ env.CI_PORT }} cargo run --release &> server.log & echo $! > .server_pid
           sleep 2
           tail -n +1 server.log || true
 
       - name: Run smoke script
         run: |
           chmod +x ./test/scripts/smoke.sh || true
-          ./test/scripts/smoke.sh http://localhost:${{ env.CI_PORT:-8080 }}
+          ./test/scripts/smoke.sh http://localhost:${{ env.CI_PORT }}
 
       - name: Teardown server
         if: always()
