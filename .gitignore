@@ -1,3 +1,7 @@
 /target
 
 .backup
+
+# Server runtime files
+server.log
+.server_pid
