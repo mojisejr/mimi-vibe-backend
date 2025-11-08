@@ -2,6 +2,10 @@
 
 .backup
 
-# Server runtime files
+# Environment files
+.env
+.env.local
+
+# Log files
+*.log
 server.log
-.server_pid

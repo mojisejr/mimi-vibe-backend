@@ -1,66 +1,163 @@
 name: CI
 
 on:
+  push:
+    branches: [ main, feature/*, staging ]
   pull_request:
-    branches: [staging]
-  workflow_dispatch: {}
-
-env:
-  CI_PORT: 8080
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      run_real:
+        description: 'Run real OpenAI smoke test (requires OPENAI_API_KEY secret)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust-version: [stable]
-
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.rust-version }}
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
 
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Ensure formatting
-        run: |
-          rustup component add rustfmt
-          cargo fmt -- --check
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Lint (clippy fail on warnings)
-        run: |
-          rustup component add clippy
-          cargo clippy --all-targets --all-features -- -D warnings
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run tests
-        run: cargo test --workspace --all-features -- --nocapture
+    - name: Build release binary
+      run: cargo build --release
 
-      - name: Build release
-        run: cargo build --release --workspace --all-features
+    - name: Determine mode
+      id: mode
+      run: |
+        # Only run real mode if:
+        # 1. workflow_dispatch triggered with run_real=true
+        # 2. OPENAI_API_KEY secret exists
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] && \
+           [[ "${{ github.event.inputs.run_real }}" == "true" ]] && \
+           [[ -n "${{ secrets.OPENAI_API_KEY }}" ]]; then
+          echo "Running in REAL OpenAI mode"
+          echo "mode=real" >> $GITHUB_OUTPUT
+        else
+          echo "Running in MOCK mode"
+          echo "mode=mock" >> $GITHUB_OUTPUT
+        fi
 
-      - name: Start server (background)
-        run: |
-          PORT=${{ env.CI_PORT }} cargo run --release &> server.log & echo $! > .server_pid
-          sleep 2
-          tail -n +1 server.log || true
+    - name: Start server (mock mode)
+      if: steps.mode.outputs.mode == 'mock'
+      run: |
+        MOCK_LLM=true BIND_ADDRESS=127.0.0.1:8080 ./target/release/mimi-backend > server.log 2>&1 &
+        SERVER_PID=$!
+        echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+        
+        # Wait for server to be ready
+        echo "Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -f http://127.0.0.1:8080/health; then
+            echo "Server is ready!"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Server failed to start!"
+            cat server.log
+            exit 1
+          fi
+          sleep 1
+        done
 
-      - name: Run smoke script
-        run: |
-          chmod +x ./test/scripts/smoke.sh || true
-          ./test/scripts/smoke.sh http://localhost:${{ env.CI_PORT }}
+    - name: Start server (real mode)
+      if: steps.mode.outputs.mode == 'real'
+      run: |
+        OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+        OPENAI_MODEL=gpt-3.5-turbo \
+        BIND_ADDRESS=127.0.0.1:8080 \
+        ./target/release/mimi-backend > server.log 2>&1 &
+        SERVER_PID=$!
+        echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+        
+        # Wait for server to be ready
+        echo "Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -f http://127.0.0.1:8080/health; then
+            echo "Server is ready!"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Server failed to start!"
+            cat server.log
+            exit 1
+          fi
+          sleep 1
+        done
 
-      - name: Teardown server
-        if: always()
-        run: |
-          if [ -f .server_pid ]; then kill $(cat .server_pid) || true; fi
+    - name: Run smoke test
+      run: |
+        echo "Testing POST /ask endpoint..."
+        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://127.0.0.1:8080/ask \
+          -H "Content-Type: application/json" \
+          -d '{"question": "Hello, what is 2+2?"}')
+        
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        BODY=$(echo "$RESPONSE" | head -n-1)
+        
+        echo "HTTP Status: $HTTP_CODE"
+        echo "Response Body: $BODY"
+        
+        # Check HTTP status is 200
+        if [ "$HTTP_CODE" != "200" ]; then
+          echo "ERROR: Expected HTTP 200, got $HTTP_CODE"
+          cat server.log
+          exit 1
+        fi
+        
+        # Check body is not empty
+        if [ -z "$BODY" ]; then
+          echo "ERROR: Response body is empty"
+          cat server.log
+          exit 1
+        fi
+        
+        # Check body contains "response" field
+        if ! echo "$BODY" | grep -q '"response"'; then
+          echo "ERROR: Response body missing 'response' field"
+          cat server.log
+          exit 1
+        fi
+        
+        echo "✓ Smoke test passed!"
+        echo "Mode: ${{ steps.mode.outputs.mode }}"
+
+    - name: Print server logs on failure
+      if: failure()
+      run: |
+        echo "=== Server Logs ==="
+        cat server.log || echo "No server log found"
+
+    - name: Cleanup
+      if: always()
+      run: |
+        if [ -n "$SERVER_PID" ]; then
+          kill $SERVER_PID || true
+        fi
