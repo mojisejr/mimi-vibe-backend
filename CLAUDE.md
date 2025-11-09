@@ -77,38 +77,77 @@
 
 ### Core Commands
 
+**✅ NEW: Claude Code Slash Commands Implemented!**
+All workflow commands are now available as proper Claude Code slash commands (markdown files in `.claude/commands/`).
+
 ```bash
+# Mode Management
+/mode [manual|copilot|status]  # Set or show execution mode
+
 # Context Management
-=fcs > [topic-name]           # Create new Context GitHub Issue (NEVER .md file)
-=fcs > [CONTEXT]            # Update existing Context GitHub Issue (NEVER .md file)
-=fcs list                     # Show all active Context Issues
+/fcs [topic-name]              # Create new Context GitHub Issue
+/fcs list                      # Show all active Context Issues
 
 # Task Management
-=plan > [task description]      # Create Task GitHub Issue using /docs/TASK-ISSUE-TEMP.md (assigned by current mode) - NEVER .md file
-=impl > [issue-number]         # Implementation workflow for specific GitHub issue (triggers based on current mode)
-=impl > [issue-number] [msg]   # Implementation with additional context/clarification
-=pr > [feedback]               # Create Pull Request from pushed feature branch (ALWAYS to staging, NEVER to main)
+/plan [task description]       # Create Task GitHub Issue using docs/TASK-ISSUE-TEMP.md
+/impl [issue-number]           # Implementation workflow for specific GitHub issue
+/impl [issue-number] [msg]     # Implementation with additional context
+/pr [feedback]                 # Create Pull Request from feature branch (to staging)
 
 # Knowledge Management
-=khub                          # 🔍 ALWAYS read Knowledge Hub #102 FIRST before creating knowledge entries
-=kupdate [category] "[topic]"   # Create Knowledge GitHub Issue using /docs/KNOWLEDGE-TEMP.md (NEVER .md file) - CHECK existing numbers first!
-=klink [knowledge-issue-number] # Link knowledge entry to Knowledge Hub #102 (automatic section placement)
-=ksync                          # Synchronize Knowledge Hub #102 with all knowledge entries
-=ksearch "[query]"              # Search across all knowledge entries
-=krecent                       # Show last 5 knowledge updates
-=kcategory [category]           # Show knowledge for specific category
+/khub                          # 🔍 Read Knowledge Hub #102 (MANDATORY first step)
+/kupdate [category] "[topic]"  # Create Knowledge GitHub Issue (CHECK existing numbers!)
+/klink [knowledge-issue-number] # Link knowledge entry to Knowledge Hub #102
+/ksync                         # Synchronize Knowledge Hub with all entries
+/ksearch "[query]"             # Search across all knowledge entries
+/krecent                       # Show last 5 knowledge updates
+/kcategory [category]          # Show knowledge for specific category
 
 # Other Commands
-=rrr > [message]              # Create daily retrospective GitHub Issue (NEVER .md file)
+/rrr [message]                 # Create daily retrospective GitHub Issue
+
+# Legacy = Commands (still supported for backward compatibility)
+=fcs > [topic-name]           # Create new Context GitHub Issue
+=plan > [task description]    # Create Task GitHub Issue
+=impl > [issue-number]        # Implementation workflow
+=khub                         # Read Knowledge Hub #102
+# ... (all other = commands still work)
 ```
+
+### Claude Code Slash Command Features
+
+- **Proper Implementation**: Markdown files in `.claude/commands/` directory
+- **Claude Integration**: Processed and executed by Claude Code
+- **Rich Documentation**: Each command includes comprehensive usage, examples, and implementation details
+- **Error Handling**: Clear error messages and helpful suggestions
+- **Validation**: Automatic checking of prerequisites and dependencies
+- **Help System**: All commands support help via detailed documentation
+
+### Command Structure
+
+All slash commands follow this structure:
+- **Usage**: Clear syntax and parameter description
+- **Examples**: Practical usage scenarios
+- **Implementation**: Step-by-step execution details
+- **Integration**: How commands work together
+- **Error Handling**: Common issues and solutions
+- **Files**: Related files and dependencies
 
 ### Template-Driven Workflow Process
 
-1. **Phase 1**: `=fcs > [topic]` → Create initial context **GitHub Issue** (NEVER .md file)
-2. **Phase 2**: `=fcs > [CONTEXT]` → Update context **GitHub Issue** iteratively
+1. **Phase 1**: `/fcs [topic]` → Create initial context **GitHub Issue** (NEVER .md file)
+2. **Phase 2**: `/fcs [topic]` → Update context **GitHub Issue** iteratively
 3. **Phase 3**: Context reaches `[Ready for Planning]` status → Ready for planning
-4. **Phase 4**: `=plan > [task]` → Create atomic **GitHub Issues** (NEVER .md files)
-5. **Phase 5**: `=impl > [issue-number]` → Implement specific GitHub issue based on mode
+4. **Phase 4**: `/plan [task]` → Create atomic **GitHub Issues** (NEVER .md files)
+5. **Phase 5**: `/impl [issue-number]` → Implement specific GitHub issue based on mode
+
+**💡 Enhanced Workflow with Claude Code Slash Commands:**
+- Use `/mode [manual|copilot]` to set execution mode
+- Commands processed by Claude Code with intelligent execution
+- Rich documentation and help built into each command
+- Comprehensive error handling and validation
+- All workflows maintain the same template-driven approach
+- Legacy `=` commands remain supported for backward compatibility
 
 ### Implementation Workflow (MANDATORY)
 
