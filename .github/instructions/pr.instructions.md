@@ -1,3 +1,7 @@
+---
+applyTo: '**'
+---
+
 # pr
 
 Pull Request Creation - Create Pull Request from feature branch to staging.

@@ -1,3 +1,7 @@
+---
+applyTo: '**'
+---
+
 # plan
 
 Task Planning - Create atomic task GitHub Issues for implementation workflow.
