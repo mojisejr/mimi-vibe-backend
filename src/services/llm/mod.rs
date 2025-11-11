@@ -1,8 +1,18 @@
 //! LLM integration module for OpenAI API calls.
 
+use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+
+/// Trait for LLM provider abstraction
+/// Enables swapping between different LLM backends (OpenAI, Gemini, etc.)
+#[async_trait]
+pub trait LlmProvider: Send + Sync {
+    /// Ask a question and get a response
+    /// Returns (answer_text, optional_raw_json)
+    async fn ask(&self, question: &str) -> Result<(String, Option<serde_json::Value>), String>;
+}
 
 #[derive(Clone)]
 pub struct OpenAiClient {
@@ -51,9 +61,13 @@ impl OpenAiClient {
             mock_mode,
         }
     }
+}
 
+/// Implement LlmProvider trait for OpenAiClient
+#[async_trait]
+impl LlmProvider for OpenAiClient {
     /// Ask a question and get a response
-    pub async fn ask(&self, question: &str) -> Result<(String, Option<serde_json::Value>), String> {
+    async fn ask(&self, question: &str) -> Result<(String, Option<serde_json::Value>), String> {
         if self.mock_mode {
             log::info!("Mock mode enabled, returning canned response");
             let mock_response = serde_json::json!({

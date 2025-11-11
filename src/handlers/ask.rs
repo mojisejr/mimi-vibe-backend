@@ -1,14 +1,14 @@
 //! Handler for the /ask LLM endpoint.
 
 use crate::models::{AskRequest, AskResponse};
-use crate::services::llm::OpenAiClient;
+use crate::services::llm::LlmProvider;
 use actix_web::{HttpResponse, web};
 use std::sync::Arc;
 
 /// Shared state for the ask endpoint
 #[derive(Clone)]
 pub struct AskState {
-    pub llm_client: Arc<OpenAiClient>,
+    pub llm_client: Arc<dyn LlmProvider>,
 }
 
 /// POST /ask handler
