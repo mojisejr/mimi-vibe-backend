@@ -1730,6 +1730,7 @@ dependencies = [
  "actix-web",
  "anyhow",
  "async-stripe",
+ "async-trait",
  "bcrypt",
  "chrono",
  "dotenv",
