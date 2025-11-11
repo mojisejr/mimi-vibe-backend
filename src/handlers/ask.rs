@@ -1,8 +1,8 @@
 //! Handler for the /ask LLM endpoint.
 
-use crate::llm::OpenAiClient;
 use crate::models::{AskRequest, AskResponse};
-use actix_web::{web, HttpResponse};
+use crate::services::llm::OpenAiClient;
+use actix_web::{HttpResponse, web};
 use std::sync::Arc;
 
 /// Shared state for the ask endpoint
@@ -12,10 +12,7 @@ pub struct AskState {
 }
 
 /// POST /ask handler
-async fn ask_handler(
-    state: web::Data<AskState>,
-    req: web::Json<AskRequest>,
-) -> HttpResponse {
+async fn ask_handler(state: web::Data<AskState>, req: web::Json<AskRequest>) -> HttpResponse {
     log::info!("Received question: {}", req.question);
 
     match state.llm_client.ask(&req.question).await {
@@ -34,8 +31,7 @@ async fn ask_handler(
 
 /// Configure the /ask routes
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    let scope = web::scope("")
-        .route("/ask", web::post().to(ask_handler));
-    
+    let scope = web::scope("").route("/ask", web::post().to(ask_handler));
+
     cfg.service(scope);
 }

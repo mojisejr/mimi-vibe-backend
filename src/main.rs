@@ -1,13 +1,12 @@
 mod db;
 mod handlers;
-mod llm;
 mod middleware;
 mod models;
 mod services;
 
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{App, HttpResponse, HttpServer, web};
 use handlers::AskState;
-use llm::OpenAiClient;
+use services::llm::OpenAiClient;
 use std::env;
 use std::sync::Arc;
 
@@ -50,13 +49,13 @@ async fn main() -> std::io::Result<()> {
     log::info!("Configuration: model={}, mock_mode={}", model, mock_mode);
 
     // Create LLM client
-// Use Arc because the OpenAiClient instance is shared by multiple actix-web
-// worker threads and request handlers. Arc<T> provides thread-safe reference
-// counting so we can clone cheap handles into app state without moving or
-// copying the client. Do NOT use Rc<T> (not Send/Sync). If the client needs
-// mutation, combine with Mutex/RwLock (e.g. Arc<Mutex<OpenAiClient>>).
-// Note: actix_web::web::Data also wraps values in an Arc internally, so
-// storing Arc<...> inside AskState is valid but a bit redundant.
+    // Use Arc because the OpenAiClient instance is shared by multiple actix-web
+    // worker threads and request handlers. Arc<T> provides thread-safe reference
+    // counting so we can clone cheap handles into app state without moving or
+    // copying the client. Do NOT use Rc<T> (not Send/Sync). If the client needs
+    // mutation, combine with Mutex/RwLock (e.g. Arc<Mutex<OpenAiClient>>).
+    // Note: actix_web::web::Data also wraps values in an Arc internally, so
+    // storing Arc<...> inside AskState is valid but a bit redundant.
     let llm_client = Arc::new(OpenAiClient::new(api_key, model, mock_mode));
 
     // Create shared state
