@@ -74,7 +74,7 @@ impl OpenAiClient {
         }
 
         log::info!("Making real OpenAI API call");
-        
+
         let request_body = ChatRequest {
             model: self.model.clone(),
             messages: vec![Message {

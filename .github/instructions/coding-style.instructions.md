@@ -6,7 +6,8 @@ applyTo: '**'
 ## 1. Project Structure
 
 - `src/handlers/` — REST API endpoint logic (split by domain, e.g., readings, payments, users)
-- `src/services/` — Business logic, AI orchestration, workflow, integration (e.g., ai_engine, payment_service, workflow)
+- `src/services/` — Business logic, AI orchestration, workflow, integration (e.g., ai_engine, payment_service, workflow, llm)
+  - `src/services/llm/` — LLM provider abstraction and implementations (e.g., OpenAI provider, trait definitions)
 - `src/models/` — Data structs, enums, schemas (split by entity, e.g., reading, user, payment, ai)
 - `src/middleware/` — Auth, rate limiting, error handler (middleware for Actix)
 - `src/db/` — Database schema, SQL queries, migration helpers
@@ -50,6 +51,8 @@ src/
     mod.rs
   services/
     ai_engine.rs
+    llm/
+      mod.rs
     payment_service.rs
     queue_service.rs
     workflow.rs

@@ -1,6 +1,6 @@
 //! Database helpers and queries.
-pub mod schema;
 pub mod queries;
+pub mod schema;
 
-pub use schema::*;
 pub use queries::*;
+pub use schema::*;
